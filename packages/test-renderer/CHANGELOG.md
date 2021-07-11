@@ -1,23 +1,49 @@
 # @react-three/test-renderer
 
+## 7.0.4
+
+### Patch Changes
+
+- 974ecfb: Allow elements to define attachFns for specific mount/unmount
+- Updated dependencies [974ecfb]
+  - @react-three/fiber@7.0.4
+
 ## 7.0.1
 
 ### Patch Changes
 
-- Fix stopPropagation logic
-- Updated dependencies [undefined]
-  - @react-three/fiber@6.2.1
+- a97aca3: Add controls state field
+- Updated dependencies [a97aca3]
+- 4c703d6: fix rttr didn't work with r130
+- Updated dependencies [4c703d6]
+- @react-three/fiber@7.0.2
 
 ## 7.0.0
 
-### Minor Changes
+### Major Changes
 
-- Allow object3d instances to be attached
+- 96ae1ad: fix javascript interpreting renderpriority as positive
 
 ### Patch Changes
 
-- Updated dependencies [undefined]
-  - @react-three/fiber@6.2.0
+- Updated dependencies [96ae1ad]
+  - @react-three/fiber@7.0.0
+
+## 6.2.3
+
+### Patch Changes
+
+- 26bc7eb: typescript changes
+- Updated dependencies [26bc7eb]
+  - @react-three/fiber@6.2.3
+
+## 6.2.2
+
+### Patch Changes
+
+- 4f44a2c: use more helpful name with event handling in rttr
+- Updated dependencies [4f44a2c]
+  - @react-three/fiber@6.2.2
 
 ## 6.1.5
 

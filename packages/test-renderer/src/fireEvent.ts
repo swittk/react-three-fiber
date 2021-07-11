@@ -5,7 +5,7 @@ import { toEventHandlerName } from './helpers/strings'
 import { ReactThreeTestInstance } from './createTestInstance'
 
 import type { MockSyntheticEvent } from './types/public'
-import type { MockSceneChild, MockUseStoreState, MockEventData } from './types/internal'
+import type { MockUseStoreState, MockEventData } from './types/internal'
 
 export const createEventFirer = (
   act: ReactReconciler.Reconciler<unknown, unknown, unknown, unknown, unknown>['act'],
@@ -26,6 +26,10 @@ export const createEventFirer = (
     if (typeof props[eventName] === 'function') {
       return props[eventName]
     }
+
+    console.warn(
+      `Handler for ${eventName} was not found. You must pass event names in camelCase or name of the handler https://github.com/pmndrs/react-three-fiber/blob/master/packages/test-renderer/markdown/rttr.md#create-fireevent`,
+    )
 
     return null
   }

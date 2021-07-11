@@ -67,6 +67,7 @@ export type RootState = {
   gl: THREE.WebGLRenderer
   scene: THREE.Scene
   camera: Camera
+  controls: THREE.EventDispatcher | null
   raycaster: Raycaster
   mouse: THREE.Vector2
   clock: THREE.Clock
@@ -232,6 +233,7 @@ const createStore = (
       flat,
       scene: prepare<THREE.Scene>(new THREE.Scene()),
       camera,
+      controls: null,
       raycaster,
       clock,
       mouse: new THREE.Vector2(),
@@ -300,7 +302,7 @@ const createStore = (
               // For that reason we switch off automatic rendering and increase the manual flag
               // As long as this flag is positive (there could be multiple render subscription)
               // ..there can be no internal rendering at all
-              priority: internal.priority + (priority ? 1 : 0),
+              priority: internal.priority + (priority > 0 ? 1 : 0),
               // Register subscriber and sort layers from lowest to highest, meaning,
               // highest priority renders last (on top of the other frames)
               subscribers: [...internal.subscribers, { ref, priority }].sort((a, b) => a.priority - b.priority),
@@ -311,7 +313,7 @@ const createStore = (
               internal: {
                 ...internal,
                 // Decrease manual flag if this subscription had a priority
-                priority: internal.priority - (priority ? 1 : 0),
+                priority: internal.priority - (priority > 0 ? 1 : 0),
                 // Remove subscriber from list
                 subscribers: internal.subscribers.filter((s) => s.ref !== ref),
               },
