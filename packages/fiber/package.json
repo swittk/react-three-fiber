@@ -53,8 +53,8 @@
     "zustand": "^3.5.10"
   },
   "peerDependencies": {
-    "react": ">=18.0",
-    "react-dom": ">=18.0",
+    "react": ">=16.0",
+    "react-dom": ">=16.0",
     "three": ">=0.132",
     "expo-gl": "^10.2.0",
     "expo-three": "^5.7.0",
