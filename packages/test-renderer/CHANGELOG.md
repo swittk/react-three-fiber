@@ -1,5 +1,29 @@
 # @react-three/test-renderer
 
+## 7.0.7
+
+### Patch Changes
+
+- 0375896: Simplify useframe, support instanced event cancelation, silence disposal
+- Updated dependencies [0375896]
+  - @react-three/fiber@7.0.7
+
+## 7.0.6
+
+### Patch Changes
+
+- fb052ad: Fix babel-env browserslist transpiling into old code"
+- Updated dependencies [fb052ad]
+  - @react-three/fiber@7.0.6
+
+## 7.0.5
+
+### Patch Changes
+
+- c97794a: Add useLoader.clear(Loader, input)
+- Updated dependencies [c97794a]
+  - @react-three/fiber@7.0.5
+
 ## 7.0.4
 
 ### Patch Changes

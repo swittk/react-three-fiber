@@ -1,5 +1,23 @@
 # @react-three/fiber
 
+## 7.0.7
+
+### Patch Changes
+
+- 0375896: Simplify useframe, support instanced event cancelation, silence disposal
+
+## 7.0.6
+
+### Patch Changes
+
+- fb052ad: Fix babel-env browserslist transpiling into old code"
+
+## 7.0.5
+
+### Patch Changes
+
+- c97794a: Add useLoader.clear(Loader, input)
+
 ## 7.0.4
 
 ### Patch Changes

@@ -1,10 +1,10 @@
 import * as THREE from 'three'
 import * as React from 'react'
 import { StateSelector, EqualityChecker } from 'zustand'
-import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader'
+import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader'
 import { useAsset } from 'use-asset'
-
 import { context, RootState, RenderCallback } from './store'
+import { buildGraph, ObjectMap } from './utils'
 
 export interface Loader<T> extends THREE.Loader {
   load(
@@ -20,46 +20,27 @@ type LoaderResult<T> = T extends any[] ? Loader<T[number]> : Loader<T>
 type ConditionalType<Child, Parent, Truthy, Falsy> = Child extends Parent ? Truthy : Falsy
 type BranchingReturn<T, Parent, Coerced> = ConditionalType<T, Parent, Coerced, T>
 
-export type ObjectMap = {
-  nodes: { [name: string]: THREE.Object3D }
-  materials: { [name: string]: THREE.Material }
+export function useStore() {
+  const store = React.useContext(context)
+  if (!store) throw `R3F hooks can only be used within the Canvas component!`
+  return store
 }
 
 export function useThree<T = RootState>(
-  selector: StateSelector<RootState, T> = (state) => (state as unknown) as T,
+  selector: StateSelector<RootState, T> = (state) => state as unknown as T,
   equalityFn?: EqualityChecker<T>,
 ) {
-  const useStore = React.useContext(context)
-  if (!useStore) throw `R3F hooks can only be used within the Canvas component!`
-  return useStore(selector, equalityFn)
+  return useStore()(selector, equalityFn)
 }
 
 export function useFrame(callback: RenderCallback, renderPriority: number = 0): null {
-  const { subscribe } = React.useContext(context).getState().internal
+  const subscribe = useStore().getState().internal.subscribe
   // Update ref
   const ref = React.useRef<RenderCallback>(callback)
   React.useLayoutEffect(() => void (ref.current = callback), [callback])
-  // Subscribe/unsub
-  React.useLayoutEffect(() => {
-    const unsubscribe = subscribe(ref, renderPriority)
-    return () => unsubscribe()
-  }, [renderPriority, subscribe])
+  // Subscribe on mount, unsubscribe on unmount
+  React.useLayoutEffect(() => subscribe(ref, renderPriority), [renderPriority, subscribe])
   return null
-}
-
-function buildGraph(object: THREE.Object3D) {
-  const data: ObjectMap = { nodes: {}, materials: {} }
-  if (object) {
-    object.traverse((obj: any) => {
-      if (obj.name) {
-        data.nodes[obj.name] = obj
-      }
-      if (obj.material && !data.materials[obj.material.name]) {
-        data.materials[obj.material.name] = obj.material
-      }
-    })
-  }
-  return data
 }
 
 export function useGraph(object: THREE.Object3D) {
@@ -113,4 +94,9 @@ useLoader.preload = function <T, U extends string | string[]>(
 ) {
   const keys = (Array.isArray(input) ? input : [input]) as string[]
   return useAsset.preload(loadingFn<T>(extensions), Proto, ...keys)
+}
+
+useLoader.clear = function <T, U extends string | string[]>(Proto: new () => LoaderResult<T>, input: U) {
+  const keys = (Array.isArray(input) ? input : [input]) as string[]
+  return useAsset.clear(Proto, ...keys)
 }

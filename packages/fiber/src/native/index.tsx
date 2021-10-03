@@ -5,59 +5,38 @@ import { ConcurrentRoot } from 'react-reconciler/constants'
 import { UseStore } from 'zustand'
 
 import { is, dispose } from '../core/utils'
-import { createStore, StoreProps, isRenderer, context, RootState, Size } from '../core/store'
+import { createStore, StoreProps, context, RootState, Size } from '../core/store'
 import { createRenderer, extend, Root } from '../core/renderer'
 import { createLoop, addEffect, addAfterEffect, addTail } from '../core/loop'
-import { createPointerEvents as events, getEventPriority } from './events'
+import { createTouchEvents as events, getEventPriority } from './events'
 import { Canvas } from './Canvas'
 import { EventManager } from '../core/events'
+import { PixelRatio, View } from 'react-native'
 
-const roots = new Map<Element, Root>()
+const roots = new Map<View, Root>()
 const { invalidate, advance } = createLoop(roots)
 const { reconciler, applyProps } = createRenderer(roots, getEventPriority)
 
-export type RenderProps<TCanvas extends Element> = Omit<StoreProps, 'gl' | 'events' | 'size'> & {
-  gl?: THREE.WebGLRenderer | Partial<THREE.WebGLRendererParameters>
-  events?: (store: UseStore<RootState>) => EventManager<TCanvas>
+export type RenderProps<TView extends View> = Omit<StoreProps, 'gl' | 'events' | 'size'> & {
+  gl?: THREE.WebGLRenderer
+  events?: (store: UseStore<RootState>) => EventManager<TView>
   size?: Size
   onCreated?: (state: RootState) => void
 }
 
-const createRendererInstance = <TElement extends Element>(
-  gl: THREE.WebGLRenderer | Partial<THREE.WebGLRendererParameters> | undefined,
-  canvas: TElement,
-): THREE.WebGLRenderer =>
-  isRenderer(gl as THREE.WebGLRenderer)
-    ? (gl as THREE.WebGLRenderer)
-    : new THREE.WebGLRenderer({
-        powerPreference: 'high-performance',
-        canvas: canvas as unknown as HTMLCanvasElement,
-        antialias: true,
-        alpha: true,
-        ...gl,
-      })
-
-function createRoot<TCanvas extends Element>(canvas: TCanvas) {
+function createRoot<TView extends View>(target: TView) {
   return {
-    render: (element: React.ReactNode) => render(element, canvas),
-    unmount: () => unmountComponentAtNode(canvas),
+    render: (element: React.ReactNode) => render(element, target),
+    unmount: () => unmountComponentAtNode(target),
   }
 }
 
-function render<TCanvas extends Element>(
+function render<TView extends View>(
   element: React.ReactNode,
-  canvas: TCanvas,
-  { gl, size, events, onCreated, ...props }: RenderProps<TCanvas> = {},
+  target: TView,
+  { dpr = PixelRatio.get(), gl, size = { width: 0, height: 0 }, events, onCreated, ...props }: RenderProps<TView> = {},
 ): UseStore<RootState> {
-  // Allow size to take on container bounds initially
-  if (!size) {
-    size = {
-      width: canvas.parentElement?.clientWidth ?? 0,
-      height: canvas.parentElement?.clientHeight ?? 0,
-    }
-  }
-
-  let root = roots.get(canvas)
+  let root = roots.get(target)
   let fiber = root?.fiber
   let store = root?.store
   let state = store?.getState()
@@ -68,7 +47,7 @@ function render<TCanvas extends Element>(
     // When a root was found, see if any fundamental props must be changed or exchanged
 
     // Check pixelratio
-    if (props.dpr !== undefined && !is.equ(lastProps.dpr, props.dpr)) state.setDpr(props.dpr)
+    if (dpr !== undefined && !is.equ(lastProps.dpr, dpr)) state.setDpr(dpr)
     // Check size
     if (!is.equ(lastProps.size, size)) state.setSize(size.width, size.height)
 
@@ -77,7 +56,7 @@ function render<TCanvas extends Element>(
     // Changes to the color-space
     const linearChanged = props.linear !== lastProps.linear
     if (linearChanged) {
-      unmountComponentAtNode(canvas)
+      unmountComponentAtNode(target)
       fiber = undefined
     }
   }
@@ -85,29 +64,28 @@ function render<TCanvas extends Element>(
   if (!fiber) {
     // If no root has been found, make one
 
-    // Create gl
-    const glRenderer = createRendererInstance(gl, canvas)
-
-    // Enable VR if requested
-    if (props.vr) {
-      glRenderer.xr.enabled = true
-      glRenderer.setAnimationLoop((timestamp) => advance(timestamp, true))
-    }
+    // Throw an error if a renderer isn't specified
+    if (!gl) throw 'An instance of THREE.WebGLRenderer must be specified via gl!'
 
     // Create store
-    store = createStore(applyProps, invalidate, advance, { gl: glRenderer, size, ...props })
+    store = createStore(applyProps, invalidate, advance, {
+      gl,
+      dpr,
+      size,
+      ...props,
+    })
     const state = store.getState()
     // Create renderer
     fiber = reconciler.createContainer(store, ConcurrentRoot, false, null)
     // Map it
-    roots.set(canvas, { fiber, store })
+    roots.set(target, { fiber, store })
     // Store events internally
     if (events) state.set({ events: events(store) })
   }
 
   if (store && fiber) {
     reconciler.updateContainer(
-      <Provider store={store} element={element} onCreated={onCreated} target={canvas} />,
+      <Provider store={store} element={element} onCreated={onCreated} target={target} />,
       fiber,
       null,
       () => undefined,
@@ -118,7 +96,7 @@ function render<TCanvas extends Element>(
   }
 }
 
-function Provider<TElement extends Element>({
+function Provider<TView extends View>({
   store,
   element,
   onCreated,
@@ -127,7 +105,7 @@ function Provider<TElement extends Element>({
   onCreated?: (state: RootState) => void
   store: UseStore<RootState>
   element: React.ReactNode
-  target: TElement
+  target: TView
 }) {
   React.useEffect(() => {
     const state = store.getState()
@@ -141,8 +119,8 @@ function Provider<TElement extends Element>({
   return <context.Provider value={store}>{element}</context.Provider>
 }
 
-function unmountComponentAtNode<TElement extends Element>(canvas: TElement, callback?: (canvas: TElement) => void) {
-  const root = roots.get(canvas)
+function unmountComponentAtNode<TView extends View>(target: TView, callback?: (target: TView) => void) {
+  const root = roots.get(target)
   const fiber = root?.fiber
   if (fiber) {
     const state = root?.store.getState()
@@ -155,8 +133,8 @@ function unmountComponentAtNode<TElement extends Element>(canvas: TElement, call
             state.gl?.renderLists?.dispose?.()
             state.gl?.forceContextLoss?.()
             dispose(state)
-            roots.delete(canvas)
-            if (callback) callback(canvas)
+            roots.delete(target)
+            if (callback) callback(target)
           } catch (e) {
             /* ... */
           }
